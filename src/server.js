@@ -11,13 +11,14 @@ const authRoutes = require('./routes/auth');
 const videoRoutes = require('./routes/videos');
 const errorHandler = require('./middleware/errorHandler');
 
-// Connect to database
+// ================== DATABASE ==================
 connectDB();
 
+// ================== APP SETUP ==================
 const app = express();
 const server = http.createServer(app);
 
-// Socket.io setup
+// ================== SOCKET.IO ==================
 const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -26,21 +27,29 @@ const io = new Server(server, {
   },
 });
 
-// Make io accessible in controllers
+// Make io accessible globally
 app.set('io', io);
 
-// Middleware
+// ================== MIDDLEWARE ==================
 app.use(cors({
-  origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['http://localhost:5173'],
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static uploads (protected via API, but this enables direct access for thumbnails)
+// Static uploads (⚠️ temporary on Render)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Routes
+// ================== ROUTES ==================
+
+// ✅ Root route (FIXED your issue)
+app.get('/', (req, res) => {
+  res.send('🚀 VideoVault Backend is Live on Render');
+});
+
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
 
@@ -54,7 +63,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Socket.io connection handling
+// ================== SOCKET EVENTS ==================
 io.on('connection', (socket) => {
   console.log(`🔌 Client connected: ${socket.id}`);
 
@@ -72,14 +81,18 @@ io.on('connection', (socket) => {
   });
 });
 
-// Error handler (must be last)
+// ================== ERROR HANDLING ==================
 app.use(errorHandler);
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`,
+  });
 });
 
+// ================== SERVER ==================
 const PORT = process.env.PORT || 8000;
 
 server.on('error', (err) => {
